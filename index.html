@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dead Air — Grateful Dead Archive Player</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --chassis: #2a2319;
+    --chassis-light: #3d3428;
+    --chassis-dark: #1a1610;
+    --plastic: #1e1b14;
+    --silver: #c8bfae;
+    --silver-dark: #a09589;
+    --silver-light: #e2d9cc;
+    --lcd-bg: #1a2e1a;
+    --lcd-green: #39ff14;
+    --lcd-dim: #1a6612;
+    --btn-blue: #2244aa;
+    --btn-red: #aa2222;
+    --btn-gray: #555548;
+    --btn-gray-light: #7a7a6a;
+    --accent-orange: #e87c2a;
+    --accent-yellow: #d4a827;
+    --text-light: #f0e8d8;
+    --text-dim: #998877;
+    --rubber: #111108;
+    --vu-green: #00ff44;
+    --vu-yellow: #ffee00;
+    --vu-red: #ff2200;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0806;
+    background-image: 
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 20px 10px 40px;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--text-light);
+    overflow-x: hidden;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 1px, rgba(0,0,0,0.07) 1px, rgba(0,0,0,0.07) 2px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  h1.logo {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: clamp(18px, 4vw, 28px);
+    letter-spacing: 0.3em;
+    color: var(--accent-orange);
+    text-shadow: 0 0 20px rgba(232,124,42,0.5), 0 0 40px rgba(232,124,42,0.2);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  .tagline {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: var(--text-dim);
+    letter-spacing: 0.2em;
+    margin-bottom: 24px;
+  }
+
+  .walkman {
+    width: 100%;
+    max-width: 480px;
+    background: linear-gradient(160deg, var(--chassis-light) 0%, var(--chassis) 40%, var(--chassis-dark) 100%);
+    border-radius: 24px 24px 32px 32px;
+    padding: 20px 22px 28px;
+    box-shadow:
+      0 0 0 2px var(--silver-dark),
+      0 0 0 3px var(--chassis-dark),
+      0 4px 8px rgba(0,0,0,0.6),
+      0 12px 40px rgba(0,0,0,0.8),
+      0 24px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.08),
+      inset 0 -2px 6px rgba(0,0,0,0.5);
+    position: relative;
+  }
+
+  .walkman-top-strip {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 8px;
+    border-radius: 24px 24px 0 0;
+    background: linear-gradient(90deg, 
+      var(--silver-dark) 0%, var(--silver-light) 20%, var(--silver-dark) 40%,
+      var(--silver-light) 60%, var(--silver-dark) 80%, var(--silver-light) 100%);
+  }
+
+  .brand-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding: 0 4px;
+  }
+
+  .brand-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    color: var(--silver);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  }
+
+  .model-name {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: var(--silver-dark);
+    letter-spacing: 0.15em;
+  }
+
+  /* LCD */
+  .lcd-panel {
+    background: var(--lcd-bg);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    box-shadow:
+      0 0 0 2px #0a1a0a,
+      0 0 0 4px #1a2e1a,
+      inset 0 0 20px rgba(0,0,0,0.6),
+      inset 0 0 0 1px rgba(57,255,20,0.04);
+    position: relative;
+    overflow: hidden;
+    min-height: 120px;
+  }
+
+  .lcd-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,30,0,0.12) 3px, rgba(0,30,0,0.12) 4px);
+    pointer-events: none;
+  }
+
+  .lcd-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+
+  .lcd-status { display: flex; gap: 10px; align-items: center; }
+
+  .lcd-indicator {
+    font-family: 'VT323', monospace;
+    font-size: 13px;
+    color: var(--lcd-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .lcd-indicator.active {
+    color: var(--lcd-green);
+    text-shadow: 0 0 8px rgba(57,255,20,0.6);
+    animation: blink 1.2s infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .lcd-time {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    color: var(--lcd-green);
+    text-shadow: 0 0 10px rgba(57,255,20,0.5);
+    letter-spacing: 0.1em;
+  }
+
+  .lcd-show-date {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--lcd-green);
+    text-shadow: 0 0 8px rgba(57,255,20,0.4);
+    letter-spacing: 0.2em;
+    margin-bottom: 3px;
+  }
+
+  .marquee-wrap { overflow: hidden; width: 100%; }
+  .marquee-text {
+    display: inline-block;
+    white-space: nowrap;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: var(--lcd-green);
+    text-shadow: 0 0 6px rgba(57,255,20,0.3);
+    letter-spacing: 0.05em;
+    animation: marquee 20s linear infinite;
+  }
+  @keyframes marquee { 0%{transform:translateX(100%)} 100%{transform:translateX(-100%)} }
+
+  .lcd-track-name {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: var(--lcd-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  .vu-meter {
+    display: flex;
+    gap: 2px;
+    height: 14px;
+    align-items: flex-end;
+    margin-top: 8px;
+  }
+
+  .vu-bar {
+    flex: 1;
+    border-radius: 1px;
+    transition: height 0.08s ease;
+    min-height: 2px;
+    opacity: 0.2;
+  }
+
+  .lcd-progress {
+    width: 100%;
+    height: 4px;
+    background: rgba(57,255,20,0.1);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .lcd-progress-fill {
+    height: 100%;
+    background: var(--lcd-green);
+    box-shadow: 0 0 6px rgba(57,255,20,0.6);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.5s linear;
+  }
+
+  /* Cassette window */
+  .cassette-window {
+    background: linear-gradient(135deg, #0e0e09 0%, #1a1a12 100%);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 16px;
+    border: 2px solid #111108;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .spool-container { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: center; }
+
+  .spool {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #4a4a35, #1a1a12);
+    border: 2px solid #3a3a28;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  }
+
+  .spool::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #0a0a06;
+    border: 2px solid #2a2a1a;
+  }
+
+  .spool-inner {
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    border: 2px dashed rgba(150,140,100,0.3);
+    animation: spin 4s linear infinite;
+    animation-play-state: paused;
+  }
+
+  .spool-inner.spinning { animation-play-state: running; }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+  .cassette-label { text-align: center; flex: 0 0 auto; }
+  .cassette-skull { font-size: 28px; line-height: 1; filter: drop-shadow(0 0 6px rgba(200,150,50,0.4)); }
+  .cassette-text { font-family: 'VT323', monospace; font-size: 10px; color: var(--accent-yellow); letter-spacing: 0.1em; display: block; margin-top: 2px; }
+
+  /* Search panel */
+  .search-panel {
+    background: linear-gradient(160deg, #2e2820 0%, #221e16 100%);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(200,180,140,0.1);
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.5);
+  }
+
+  .search-label {
+    font-family: 'VT323', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 0.2em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .search-row { display: flex; gap: 6px; margin-bottom: 8px; }
+
+  .search-input {
+    flex: 1;
+    background: #0e0c08;
+    border: 1px solid #3a3428;
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: var(--lcd-green);
+    outline: none;
+    letter-spacing: 0.1em;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.6);
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+
+  .search-input:focus {
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.6), 0 0 8px rgba(57,255,20,0.2);
+    border-color: rgba(57,255,20,0.3);
+  }
+
+  .search-input::placeholder { color: #2a4a2a; }
+
+  .btn {
+    padding: 7px 12px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    transition: all 0.1s;
+    text-transform: uppercase;
+  }
+
+  .btn:active { transform: scale(0.96); }
+
+  .btn-search {
+    background: linear-gradient(180deg, #3a5a3a, #1e3a1e);
+    color: var(--lcd-green);
+    border: 1px solid #2a4a2a;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(57,255,20,0.1);
+    text-shadow: 0 0 8px rgba(57,255,20,0.5);
+  }
+
+  .btn-search:hover { background: linear-gradient(180deg, #4a7a4a, #2a5a2a); }
+
+  .filter-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+
+  .btn-filter {
+    background: linear-gradient(180deg, #3a3428, #221e16);
+    color: var(--text-dim);
+    border: 1px solid #3a3428;
+    font-size: 12px;
+    padding: 5px 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+
+  .btn-filter:hover, .btn-filter.active {
+    background: linear-gradient(180deg, #5a4a30, #3a3020);
+    color: var(--accent-yellow);
+    border-color: var(--accent-orange);
+    box-shadow: 0 0 6px rgba(232,124,42,0.2);
+  }
+
+  /* Results */
+  .results-panel {
+    background: #0e0c08;
+    border-radius: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #2a2418;
+    margin-bottom: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: #3a3428 #0e0c08;
+  }
+
+  .results-panel::-webkit-scrollbar { width: 4px; }
+  .results-panel::-webkit-scrollbar-track { background: #0e0c08; }
+  .results-panel::-webkit-scrollbar-thumb { background: #3a3428; border-radius: 2px; }
+
+  .result-item {
+    padding: 9px 12px;
+    border-bottom: 1px solid #1a1610;
+    cursor: pointer;
+    transition: background 0.1s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .result-item:last-child { border-bottom: none; }
+  .result-item:hover { background: #1a1810; }
+  .result-item.active { background: #1a2e1a; border-left: 2px solid var(--lcd-green); }
+
+  .result-date {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--accent-orange);
+    letter-spacing: 0.1em;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .result-title {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: var(--text-light);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .result-meta {
+    font-family: 'VT323', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .results-empty {
+    padding: 20px;
+    text-align: center;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: var(--text-dim);
+  }
+
+  /* Transport */
+  .transport {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .transport-btn {
+    border: none;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s;
+    color: var(--silver);
+    position: relative;
+  }
+
+  .transport-btn:hover::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 1px solid rgba(200,180,140,0.3);
+    box-shadow: 0 0 8px rgba(200,180,140,0.2);
+  }
+
+  .transport-btn:active { transform: scale(0.9); }
+
+  .t-btn-sm {
+    width: 38px; height: 38px;
+    background: linear-gradient(160deg, var(--btn-gray-light), var(--btn-gray));
+    box-shadow: 0 3px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.4);
+    font-size: 14px;
+  }
+
+  .t-btn-md { width: 50px; height: 50px; font-size: 20px; }
+
+  .t-btn-play {
+    background: linear-gradient(160deg, #c84040, #882020);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.7), 0 0 12px rgba(170,30,30,0.3), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -3px 6px rgba(0,0,0,0.4);
+    color: #ffcccc;
+  }
+
+  .t-btn-play:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.7), 0 0 20px rgba(200,40,40,0.4), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -3px 6px rgba(0,0,0,0.4);
+  }
+
+  /* Volume */
+  .volume-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 4px;
+    margin-bottom: 14px;
+  }
+
+  .vol-label { font-family: 'VT323', monospace; font-size: 13px; color: var(--text-dim); letter-spacing: 0.15em; width: 30px; }
+
+  .vol-slider {
+    flex: 1;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent-orange) 0%, var(--accent-orange) 80%, #2a2418 80%);
+    outline: none;
+    cursor: pointer;
+  }
+
+  .vol-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: linear-gradient(160deg, var(--silver-light), var(--silver-dark));
+    box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    cursor: pointer;
+  }
+
+  /* Tracklist */
+  .tracklist-panel {
+    background: #0e0c08;
+    border-radius: 6px;
+    max-height: 160px;
+    overflow-y: auto;
+    border: 1px solid #2a2418;
+    scrollbar-width: thin;
+    scrollbar-color: #3a3428 #0e0c08;
+  }
+
+  .tracklist-panel::-webkit-scrollbar { width: 4px; }
+  .tracklist-panel::-webkit-scrollbar-track { background: #0e0c08; }
+  .tracklist-panel::-webkit-scrollbar-thumb { background: #3a3428; border-radius: 2px; }
+
+  .track-item {
+    padding: 6px 12px;
+    border-bottom: 1px solid #1a1610;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.1s;
+  }
+
+  .track-item:last-child { border-bottom: none; }
+  .track-item:hover { background: #1a1810; }
+  .track-item.active { background: #1a2e1a; }
+
+  .track-num { font-family: 'VT323', monospace; font-size: 12px; color: var(--text-dim); width: 20px; text-align: right; flex: 0 0 auto; }
+  .track-name { font-family: 'VT323', monospace; font-size: 14px; color: var(--text-light); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-item.active .track-name { color: var(--lcd-green); text-shadow: 0 0 6px rgba(57,255,20,0.3); }
+  .track-dur { font-family: 'VT323', monospace; font-size: 12px; color: var(--text-dim); flex: 0 0 auto; }
+
+  .section-header {
+    font-family: 'VT323', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 0.2em;
+    padding: 6px 12px 4px;
+    background: rgba(0,0,0,0.3);
+    border-bottom: 1px solid #1a1610;
+    text-transform: uppercase;
+  }
+
+  .screws { display: flex; justify-content: space-between; padding: 0 8px; margin-top: 14px; }
+
+  .screw {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, var(--silver), var(--silver-dark));
+    box-shadow: 0 1px 2px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.3);
+    position: relative;
+  }
+
+  .screw::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 15%;
+    width: 70%; height: 1px;
+    background: rgba(0,0,0,0.6);
+    transform: rotate(45deg);
+  }
+
+  .loading {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: var(--lcd-green);
+    text-align: center;
+    padding: 15px;
+    text-shadow: 0 0 8px rgba(57,255,20,0.4);
+    animation: pulse 0.8s infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  audio { display: none; }
+</style>
+</head>
+<body>
+
+<h1 class="logo">☠ DEAD AIR ☠</h1>
+<p class="tagline">GRATEFUL DEAD ARCHIVE PLAYER v1.0</p>
+
+<div class="walkman">
+  <div class="walkman-top-strip"></div>
+
+  <div class="brand-label">
+    <span class="brand-name">DEAD·TECH</span>
+    <span class="model-name">GD-1995 STEREO</span>
+  </div>
+
+  <!-- LCD Display -->
+  <div class="lcd-panel">
+    <div class="lcd-top">
+      <div class="lcd-status">
+        <span class="lcd-indicator" id="play-indicator">▶ PLAY</span>
+        <span class="lcd-indicator active" id="tape-indicator">◉ TAPE</span>
+      </div>
+      <div class="lcd-time" id="lcd-time">00:00</div>
+    </div>
+    <div class="lcd-track-info">
+      <div class="lcd-show-date" id="lcd-show-date">GRATEFUL DEAD ARCHIVE</div>
+      <div class="marquee-wrap">
+        <span class="marquee-text" id="lcd-title">SEARCH FOR A SHOW TO BEGIN ──── TOUCH TOP SHOWS FOR THE GREATEST HITS ────</span>
+      </div>
+      <div class="lcd-track-name" id="lcd-track">SELECT A DATE, YEAR, OR TAP TOP SHOWS</div>
+    </div>
+    <div class="vu-meter" id="vu-meter"></div>
+    <div class="lcd-progress" id="progress-bar">
+      <div class="lcd-progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- Cassette Window -->
+  <div class="cassette-window">
+    <div class="spool-container">
+      <div class="spool"><div class="spool-inner" id="spool-left"></div></div>
+      <div class="cassette-label">
+        <div class="cassette-skull">☯</div>
+        <span class="cassette-text">GRATEFUL DEAD</span>
+      </div>
+      <div class="spool"><div class="spool-inner" id="spool-right"></div></div>
+    </div>
+  </div>
+
+  <!-- Search Panel -->
+  <div class="search-panel">
+    <div class="search-label">▶ FIND A SHOW</div>
+    <div class="search-row">
+      <input type="text" class="search-input" id="search-input" placeholder="1977-05-08  or  1972  or  cornell...">
+      <button class="btn btn-search" onclick="doSearch()">SEEK</button>
+    </div>
+    <div class="filter-btns">
+      <button class="btn btn-filter" id="btn-top" onclick="loadTop()">★ TOP SHOWS</button>
+      <button class="btn btn-filter" onclick="quickSearch('1969')">1969</button>
+      <button class="btn btn-filter" onclick="quickSearch('1972')">1972</button>
+      <button class="btn btn-filter" onclick="quickSearch('1977')">1977</button>
+      <button class="btn btn-filter" onclick="quickSearch('1980')">1980</button>
+      <button class="btn btn-filter" onclick="quickSearch('1990')">1990</button>
+      <button class="btn btn-filter" onclick="quickSearch('1995')">1995</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="results-panel" id="results-panel">
+    <div class="results-empty">Search for a show or tap ★ TOP SHOWS</div>
+  </div>
+
+  <!-- Transport Controls -->
+  <div class="transport">
+    <button class="transport-btn t-btn-sm" onclick="prevTrack()" title="Previous">⏮</button>
+    <button class="transport-btn t-btn-sm" onclick="skipBack()" title="Rewind 30s">⏪</button>
+    <button class="transport-btn t-btn-md t-btn-play" id="play-btn" onclick="togglePlay()" title="Play/Pause">▶</button>
+    <button class="transport-btn t-btn-sm" onclick="skipForward()" title="Forward 30s">⏩</button>
+    <button class="transport-btn t-btn-sm" onclick="nextTrack()" title="Next">⏭</button>
+  </div>
+
+  <!-- Volume -->
+  <div class="volume-row">
+    <span class="vol-label">VOL</span>
+    <input type="range" class="vol-slider" id="vol-slider" min="0" max="1" step="0.01" value="0.8">
+    <span class="vol-label" style="text-align:right;width:auto;font-size:11px">MAX</span>
+  </div>
+
+  <!-- Tracklist -->
+  <div class="tracklist-panel" id="tracklist-panel">
+    <div class="section-header">── TRACK LIST ──</div>
+    <div style="font-family:'VT323',monospace;font-size:14px;padding:15px;text-align:center;color:var(--text-dim)">Load a show to see tracks</div>
+  </div>
+
+  <div class="screws">
+    <div class="screw"></div>
+    <div class="screw"></div>
+    <div class="screw"></div>
+    <div class="screw"></div>
+  </div>
+</div>
+
+<audio id="audio-player" crossorigin="anonymous"></audio>
+
+<script>
+const audio = document.getElementById('audio-player');
+const volSlider = document.getElementById('vol-slider');
+let currentShow = null;
+let tracks = [];
+let currentTrackIndex = 0;
+let isPlaying = false;
+let vuInterval = null;
+
+// VU Meter setup
+const vuMeter = document.getElementById('vu-meter');
+for (let i = 0; i < 20; i++) {
+  const bar = document.createElement('div');
+  bar.className = 'vu-bar';
+  bar.style.height = '2px';
+  bar.style.background = i < 12 ? 'var(--vu-green)' : i < 16 ? 'var(--vu-yellow)' : 'var(--vu-red)';
+  vuMeter.appendChild(bar);
+}
+
+function animateVU(playing) {
+  clearInterval(vuInterval);
+  const bars = vuMeter.querySelectorAll('.vu-bar');
+  if (!playing) {
+    bars.forEach(b => { b.style.height = '2px'; b.style.opacity = '0.15'; });
+    return;
+  }
+  vuInterval = setInterval(() => {
+    bars.forEach((b, i) => {
+      const level = Math.random();
+      const falloff = Math.max(0, 1 - (i / bars.length) * 1.2);
+      const h = Math.floor(2 + level * falloff * 12);
+      b.style.height = h + 'px';
+      b.style.opacity = (level * falloff > 0.2) ? '1' : '0.2';
+    });
+  }, 80);
+}
+
+// Volume
+volSlider.addEventListener('input', () => {
+  audio.volume = parseFloat(volSlider.value);
+  const pct = parseFloat(volSlider.value) * 100;
+  volSlider.style.background = `linear-gradient(90deg, var(--accent-orange) 0%, var(--accent-orange) ${pct}%, #2a2418 ${pct}%)`;
+});
+audio.volume = 0.8;
+
+// Progress
+const progressBar = document.getElementById('progress-bar');
+const progressFill = document.getElementById('progress-fill');
+const lcdTime = document.getElementById('lcd-time');
+
+progressBar.addEventListener('click', (e) => {
+  if (!audio.duration) return;
+  const rect = progressBar.getBoundingClientRect();
+  audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+});
+
+audio.addEventListener('timeupdate', () => {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+    lcdTime.textContent = formatTime(audio.currentTime);
+  }
+});
+
+audio.addEventListener('ended', nextTrack);
+
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  return `${String(m).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+}
+
+function setPlayState(playing) {
+  isPlaying = playing;
+  document.getElementById('play-btn').textContent = playing ? '⏸' : '▶';
+  const pi = document.getElementById('play-indicator');
+  playing ? pi.classList.add('active') : pi.classList.remove('active');
+  document.querySelectorAll('.spool-inner').forEach(s => {
+    playing ? s.classList.add('spinning') : s.classList.remove('spinning');
+  });
+  animateVU(playing);
+}
+
+function togglePlay() {
+  if (!audio.src) return;
+  if (isPlaying) {
+    audio.pause();
+    setPlayState(false);
+  } else {
+    audio.play().then(() => setPlayState(true)).catch(console.error);
+  }
+}
+
+function skipBack() { audio.currentTime = Math.max(0, audio.currentTime - 30); }
+function skipForward() { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 30); }
+
+function prevTrack() {
+  if (currentTrackIndex > 0) { currentTrackIndex--; playTrack(currentTrackIndex); }
+}
+
+function nextTrack() {
+  if (currentTrackIndex < tracks.length - 1) { currentTrackIndex++; playTrack(currentTrackIndex); }
+  else setPlayState(false);
+}
+
+// Archive.org API
+async function searchArchive(query) {
+  const panel = document.getElementById('results-panel');
+  panel.innerHTML = '<div class="loading">⟳ SEARCHING ARCHIVE...</div>';
+
+  let q = 'collection:GratefulDead mediatype:audio';
+
+  const trimmed = query.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    q += ` date:${trimmed}`;
+  } else if (/^\d{4}-\d{2}$/.test(trimmed)) {
+    q += ` year:${trimmed.split('-')[0]}`;
+  } else if (/^\d{4}$/.test(trimmed)) {
+    q += ` year:${trimmed}`;
+  } else if (trimmed) {
+    q += ` title:(${trimmed})`;
+  }
+
+  const url = `https://archive.org/advancedsearch.php?q=${encodeURIComponent(q)}&fl[]=identifier,title,date,downloads&sort[]=date+asc&rows=50&output=json`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    renderResults(data.response?.docs || [], false);
+  } catch(e) {
+    panel.innerHTML = '<div class="results-empty">⚠ TAPE READ ERROR — CHECK CONNECTION</div>';
+  }
+}
+
+async function loadTop() {
+  const panel = document.getElementById('results-panel');
+  panel.innerHTML = '<div class="loading">⟳ LOADING TOP SHOWS...</div>';
+
+  const url = `https://archive.org/advancedsearch.php?q=${encodeURIComponent('collection:GratefulDead mediatype:audio')}&fl[]=identifier,title,date,downloads&sort[]=downloads+desc&rows=50&output=json`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    renderResults(data.response?.docs || [], true);
+  } catch(e) {
+    panel.innerHTML = '<div class="results-empty">⚠ TAPE READ ERROR</div>';
+  }
+}
+
+function renderResults(docs, showDownloads) {
+  const panel = document.getElementById('results-panel');
+  if (!docs.length) {
+    panel.innerHTML = '<div class="results-empty">NO SHOWS FOUND — TRY ANOTHER SEARCH</div>';
+    return;
+  }
+  panel.innerHTML = '';
+  const hdr = document.createElement('div');
+  hdr.className = 'section-header';
+  hdr.textContent = `── ${docs.length} SHOWS FOUND ──`;
+  panel.appendChild(hdr);
+
+  docs.forEach(doc => {
+    const item = document.createElement('div');
+    item.className = 'result-item';
+    const dateStr = doc.date ? doc.date.split('T')[0] : '??-??-??';
+    const dlStr = showDownloads && doc.downloads ? '▼' + (doc.downloads > 999 ? Math.floor(doc.downloads/1000)+'K' : doc.downloads) : '';
+    item.innerHTML = `
+      <span class="result-date">${dateStr}</span>
+      <span class="result-title">${doc.title || doc.identifier}</span>
+      <span class="result-meta">${dlStr}</span>
+    `;
+    item.onclick = () => {
+      document.querySelectorAll('.result-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      loadShow(doc);
+    };
+    panel.appendChild(item);
+  });
+}
+
+async function loadShow(doc) {
+  currentShow = doc;
+  document.getElementById('lcd-show-date').textContent = doc.date ? doc.date.split('T')[0] : doc.identifier;
+  document.getElementById('lcd-title').textContent = (doc.title || doc.identifier) + ' ──── ';
+
+  const tracklist = document.getElementById('tracklist-panel');
+  tracklist.innerHTML = '<div class="section-header">── LOADING TRACKS ──</div><div class="loading">⟳ CUEING TAPE...</div>';
+
+  try {
+    const res = await fetch(`https://archive.org/metadata/${doc.identifier}`);
+    const meta = await res.json();
+
+    // Get MP3 files (prefer 64kb or standard mp3 over VBR)
+    let allFiles = (meta.files || []);
+    let mp3s = allFiles.filter(f => {
+      const n = (f.name||'').toLowerCase();
+      return n.endsWith('.mp3') && !n.includes('vbr');
+    });
+
+    // Fallback to any mp3
+    if (!mp3s.length) mp3s = allFiles.filter(f => (f.name||'').toLowerCase().endsWith('.mp3'));
+    // Fallback to ogg
+    if (!mp3s.length) mp3s = allFiles.filter(f => (f.name||'').toLowerCase().endsWith('.ogg'));
+
+    // Sort by track number or filename
+    mp3s.sort((a, b) => {
+      const ta = parseInt(a.track || 0);
+      const tb = parseInt(b.track || 0);
+      if (ta && tb && ta !== tb) return ta - tb;
+      return (a.name||'').localeCompare(b.name||'');
+    });
+
+    tracks = mp3s;
+    renderTracklist(doc.identifier);
+
+    if (tracks.length) {
+      currentTrackIndex = 0;
+      playTrack(0);
+    }
+  } catch(e) {
+    tracklist.innerHTML = '<div class="section-header">── TRACK LIST ──</div><div style="padding:15px;text-align:center;font-family:VT323,monospace;font-size:14px;color:var(--text-dim)">CANNOT LOAD SHOW — TRY ANOTHER</div>';
+  }
+}
+
+function renderTracklist(identifier) {
+  const tracklist = document.getElementById('tracklist-panel');
+  tracklist.innerHTML = '<div class="section-header">── TRACK LIST ──</div>';
+
+  if (!tracks.length) {
+    tracklist.innerHTML += '<div style="padding:15px;text-align:center;font-family:VT323,monospace;font-size:14px;color:var(--text-dim)">NO PLAYABLE TRACKS FOUND</div>';
+    return;
+  }
+
+  tracks.forEach((f, i) => {
+    const item = document.createElement('div');
+    item.className = 'track-item';
+    item.id = `track-${i}`;
+    const name = f.title || (f.name||'').replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ');
+    const dur = f.length ? formatTime(parseFloat(f.length)) : '--:--';
+    item.innerHTML = `
+      <span class="track-num">${String(i+1).padStart(2,'0')}</span>
+      <span class="track-name">${name}</span>
+      <span class="track-dur">${dur}</span>
+    `;
+    item.onclick = () => { currentTrackIndex = i; playTrack(i); };
+    tracklist.appendChild(item);
+  });
+}
+
+function playTrack(index) {
+  if (!tracks[index] || !currentShow) return;
+
+  document.querySelectorAll('.track-item').forEach(t => t.classList.remove('active'));
+  const el = document.getElementById(`track-${index}`);
+  if (el) { el.classList.add('active'); el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+
+  const f = tracks[index];
+  audio.src = `https://archive.org/download/${currentShow.identifier}/${encodeURIComponent(f.name)}`;
+  audio.load();
+
+  const name = f.title || (f.name||'').replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ');
+  document.getElementById('lcd-track').textContent = `${String(index+1).padStart(2,'0')} ${name}`;
+  progressFill.style.width = '0%';
+  lcdTime.textContent = '00:00';
+
+  audio.play()
+    .then(() => setPlayState(true))
+    .catch(e => console.log('Playback error:', e));
+}
+
+function doSearch() {
+  const q = document.getElementById('search-input').value;
+  if (q.trim()) searchArchive(q);
+}
+
+function quickSearch(year) {
+  document.getElementById('search-input').value = year;
+  searchArchive(year);
+}
+
+document.getElementById('search-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+
+// Auto-load top shows
+loadTop();
+</script>
+</body>
+</html>
